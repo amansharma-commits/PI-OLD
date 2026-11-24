@@ -616,6 +616,9 @@ p, h1, h2, h3, figure, blockquote { margin: 0; }
   transition: background-color 0.5s var(--ease-out), width 0.5s var(--ease-out), transform 0.3s var(--ease-out);
 }
 .dot:hover { transform: scaleY(1.25); }
+/* Bigger invisible tap area around each thin dot, for touch screens */
+.dot { position: relative; }
+.dot::after { content: ""; position: absolute; inset: -16px -5px; }
 .dot.is-active {
   background: var(--orange);
   width: 72px;
@@ -1634,16 +1637,22 @@ p, h1, h2, h3, figure, blockquote { margin: 0; }
   .footer-links { flex-direction: column; gap: 40px; }
 }
 
+/* Very narrow phones: two stat columns are too tight for "IRR NGO 2", so stack them */
+@media (max-width: 360px) {
+  .impact .stats { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 720px) {
   :root { --radius-xl: 40px; --radius-lg: 28px; }
 
   .display { font-size: 34px; }
 
-  .hero-card { min-height: 520px; }
-  .hero-copy { margin: 0 0 32px 28px; width: calc(100% - 56px); }
+  /* The banner dots sit on the card's bottom edge, so the copy is lifted clear of them */
+  .hero-card { min-height: 600px; }
+  .hero-copy { margin: 0 0 92px 28px; width: calc(100% - 56px); }
   .hero-title { font-size: 36px; }
-  .hero-text { font-size: 18px; padding-bottom: 24px; }
-  .hero-dots { right: 24px; }
+  .hero-text { padding-bottom: 24px; }
+  .hero-dots { left: 50%; right: auto; translate: -50% 0; padding-inline: 22px; gap: 8px; }
 
   .thumb { height: 300px; border-radius: 28px; }
   .play-btn { width: 60px; height: 60px; margin: -30px 0 0 -30px; }
@@ -1813,3 +1822,19 @@ p, h1, h2, h3, figure, blockquote { margin: 0; }
   .footer-title, .footer-heading { font-size: 22px; line-height: 30px; }
 }
 
+
+/* Touch screens and phones have no hover, so advisory cards show their bio all the time:
+   photo on top, orange name bar, then the bio, stacked normally. */
+@media (hover: none), (max-width: 720px) {
+  .carousel--members .member { height: auto; }
+  .carousel--members .member .member-photo { position: relative; inset: auto; height: 170px; }
+  .carousel--members .member .member-panel {
+    position: relative;
+    height: auto;
+    max-height: none;
+    border-radius: 0 0 32px 32px;
+    box-shadow: none;
+  }
+  .carousel--members .member .member-bio { opacity: 1; transform: none; }
+  .carousel--members .member:hover { transform: none; box-shadow: none; }
+}

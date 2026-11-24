@@ -255,6 +255,91 @@
   syncCarouselControls();
   window.addEventListener("resize", syncCarouselControls);
 
+  /* ---------- Video pop-up player ---------- */
+  const videoThumb = document.querySelector(".thumb");
+  const videoModal = document.querySelector(".video-modal");
+
+  if (videoThumb && videoModal) {
+    const frame = videoModal.querySelector(".video-modal__frame");
+    const closeBtn = videoModal.querySelector(".video-modal__close");
+    let returnFocus = null;
+
+    // Turn a YouTube link into an embeddable URL (null when it is not a YouTube link)
+    const toYouTubeEmbed = (raw) => {
+      try {
+        const u = new URL(raw, location.href);
+        const host = u.hostname.replace(/^www\./, "");
+        let id = "";
+        if (host === "youtu.be") id = u.pathname.slice(1);
+        else if (host.endsWith("youtube.com")) {
+          id = u.searchParams.get("v") || (u.pathname.startsWith("/embed/") ? u.pathname.split("/")[2] : "");
+        }
+        return id ? `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0` : null;
+      } catch {
+        return null;
+      }
+    };
+
+    const openVideo = (node) => {
+      returnFocus = document.activeElement;
+      frame.classList.toggle("is-image", node.tagName === "IMG");
+      frame.replaceChildren(node);
+      videoModal.hidden = false;
+      document.body.style.overflow = "hidden";
+      requestAnimationFrame(() => videoModal.classList.add("is-open"));
+      closeBtn.focus();
+    };
+
+    const closeVideo = () => {
+      videoModal.classList.remove("is-open");
+      document.body.style.overflow = "";
+      // Remove the player so playback stops, after the fade-out
+      setTimeout(() => {
+        videoModal.hidden = true;
+        frame.replaceChildren();
+      }, prefersReduced ? 0 : 300);
+      if (returnFocus) returnFocus.focus();
+    };
+
+    videoThumb.addEventListener("click", () => {
+      const src = (videoThumb.dataset.video || "").trim();
+
+      if (!src) {
+        // No video link set yet: show the poster image in the pop-up for now
+        const poster = videoThumb.querySelector(".thumb-img");
+        const img = document.createElement("img");
+        img.src = poster ? poster.getAttribute("src") : "";
+        img.alt = "Conversations with Project Inclusion: When Dyslexia Comes Home, with Dr. Bhuvana Vasudevan";
+        openVideo(img);
+        return;
+      }
+
+      const embed = toYouTubeEmbed(src);
+      if (embed) {
+        const iframe = document.createElement("iframe");
+        iframe.src = embed;
+        iframe.title = "Project Inclusion video";
+        iframe.allow = "autoplay; encrypted-media; picture-in-picture; fullscreen";
+        iframe.allowFullscreen = true;
+        openVideo(iframe);
+      } else if (/\.(mp4|webm|ogg)(\?|$)/i.test(src)) {
+        const video = document.createElement("video");
+        video.src = src;
+        video.controls = true;
+        video.autoplay = true;
+        video.playsInline = true;
+        openVideo(video);
+      } else {
+        window.open(src, "_blank", "noopener,noreferrer");
+      }
+    });
+
+    videoModal.querySelectorAll("[data-close-video]").forEach((el) => el.addEventListener("click", closeVideo));
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !videoModal.hidden) closeVideo();
+    });
+  }
+
   /* ---------- One-page navigation: highlight the nav item for the section in view ---------- */
   const navLinks = [...document.querySelectorAll(".nav-list a[href^='#']")];
   const spyTargets = navLinks

@@ -856,6 +856,15 @@ p, h1, h2, h3, figure, blockquote { margin: 0; }
   overflow-clip-margin: 24px;
 }
 
+/* The infographic image (tablet and desktop); phones get the card layout below instead */
+.ecosystem--image { max-width: 760px; }
+.ecosystem--image img { display: block; width: 100%; height: auto; }
+.ecosystem--stack { display: none; }
+@media (max-width: 600px) {
+  .ecosystem--image { display: none; }
+  .ecosystem--stack { display: block; }
+}
+
 .eco-stage {
   position: relative;
   aspect-ratio: 1100 / 505;

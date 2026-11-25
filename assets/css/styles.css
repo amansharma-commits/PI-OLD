@@ -327,7 +327,10 @@ p, h1, h2, h3, figure, blockquote { margin: 0; }
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding-block: 4px;
+  /* Bigger click area than the words: padding adds it, the negative margin cancels it so the
+     layout does not move (the 25px side padding exactly fills half of the 50px gap) */
+  padding: 12px 25px;
+  margin: -8px -25px;
   font-size: 18px;
   font-weight: 400;
   line-height: 24px;
@@ -456,7 +459,7 @@ p, h1, h2, h3, figure, blockquote { margin: 0; }
   position: relative;
   width: 44px;
   height: 44px;
-  margin-left: auto;
+  flex-shrink: 0;
   border-radius: 12px;
 }
 .nav-toggle span {
@@ -476,12 +479,18 @@ p, h1, h2, h3, figure, blockquote { margin: 0; }
 .nav-toggle[aria-expanded="true"] span:nth-child(3) { top: 21px; transform: rotate(-45deg); }
 
 @media (max-width: 1200px) {
-  .nav-toggle { display: block; }
+  .nav-toggle { display: block; margin-left: -12px; } /* menu button sits right of "Log in", closer to it */
+  .btn-login { margin-left: auto; }                    /* "Log in" + menu button pushed to the right edge */
   .header-inner { padding-block: 12px; }
   .site-nav {
-    position: fixed;
-    inset: 0 0 auto 0;
-    top: var(--header-h, 112px);
+    /* Hangs directly under the header whatever its height (a fixed offset left a strip of
+       page showing between the header and the open menu) */
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    max-height: calc(100vh - 90px);
+    overflow-y: auto;
     flex-direction: column;
     align-items: stretch;
     padding: 24px clamp(20px, 5.56vw, 80px) 32px;
@@ -500,11 +509,21 @@ p, h1, h2, h3, figure, blockquote { margin: 0; }
     opacity: 1;
     visibility: visible;
   }
-  .nav-list { flex-direction: column; align-items: flex-start; gap: 18px; }
-  .nav-link { font-size: 18px; }
+  /* Each link is a full-width row (edge to edge of the menu panel), so the whole row is tappable */
+  .nav-list { flex-direction: column; align-items: stretch; gap: 0; }
+  .nav-link {
+    display: flex;
+    font-size: 18px;
+    margin: 0 calc(-1 * clamp(20px, 5.56vw, 80px));
+    padding: 14px clamp(20px, 5.56vw, 80px);
+  }
+  .nav-link:hover,
+  .nav-link:focus-visible,
+  .nav-link.is-active { background: var(--orange-tint); }
 }
 
 @media (max-width: 640px) {
+  .header-inner { gap: 12px; }
   .brand img { width: 56px; height: 56px; border-radius: 12px; }
   .brand-text { font-size: 14px; line-height: 20px; }
   .btn-login { height: 38px; padding: 8px 20px; font-size: 14px; }
@@ -843,251 +862,19 @@ p, h1, h2, h3, figure, blockquote { margin: 0; }
 .approach-text { color: var(--ink); max-width: 1160px; }
 
 /* ==========================================================================
-   ECOSYSTEM DIAGRAM (Our Approach)
-   Hub-and-spoke: the child at the centre, five stakeholder cards around it.
-   Cards are positioned by percentage on a stage with a fixed aspect ratio,
-   so they always sit on the ends of the SVG links drawn in the same space.
+   APPROACH INFOGRAPHIC (Our Approach)
+   One image on every screen size: it scales with the section.
    ========================================================================== */
-.ecosystem {
-  max-width: 1100px;
+.ecosystem--image {
+  max-width: 760px;
   margin: var(--head-gap) auto 0;
-  /* Cards animate in from slightly off position; never let that widen the page */
-  overflow-x: clip;
-  overflow-clip-margin: 24px;
 }
-
-/* The infographic image (tablet and desktop); phones get the card layout below instead */
-.ecosystem--image { max-width: 760px; }
 .ecosystem--image img { display: block; width: 100%; height: auto; }
-.ecosystem--stack { display: none; }
+
+/* Phones: let the infographic run a little wider than the text column so its labels
+   stay as large as possible */
 @media (max-width: 600px) {
-  .ecosystem--image { display: none; }
-  .ecosystem--stack { display: block; }
-}
-
-.eco-stage {
-  position: relative;
-  aspect-ratio: 1100 / 505;
-}
-
-/* --- Links --- */
-.eco-links {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-}
-.eco-line {
-  fill: none;
-  stroke: #f4c99c;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;               /* hidden until the diagram is revealed */
-  transition:
-    stroke-dashoffset 1.1s var(--ease-out) var(--ld, 0s),
-    stroke 0.35s var(--ease-out),
-    stroke-width 0.35s var(--ease-out);
-}
-.ecosystem.is-in .eco-line { stroke-dashoffset: 0; }
-
-.eco-pulses polygon {
-  fill: var(--orange);
-  stroke: var(--orange);
-  stroke-width: 1;
-  stroke-linejoin: round;
-  opacity: 0;
-  transition: opacity 0.6s var(--ease-out) 1.3s;
-}
-.ecosystem.is-in .eco-pulses polygon { opacity: 0.9; }
-
-/* --- Hub: the child --- */
-.eco-hub {
-  position: absolute;
-  left: 50%;
-  top: 52.5%;
-  z-index: 2;
-  width: 196px;
-  height: 196px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 32% 28%, #ffb04d 0%, #ff8400 58%, #f07200 100%);
-  color: var(--white);
-  text-align: center;
-  box-shadow:
-    0 22px 44px -18px rgba(255, 132, 0, 0.75),
-    inset 0 2px 0 rgba(255, 255, 255, 0.25);
-  transform: translate(-50%, -50%) scale(0.6);
-  opacity: 0;
-  transition: transform 0.9s var(--ease-out), opacity 0.6s var(--ease-out);
-}
-.ecosystem.is-in .eco-hub {
-  transform: translate(-50%, -50%) scale(1);
-  opacity: 1;
-}
-
-/* Two soft rings ripple out from the hub */
-.eco-hub::before,
-.eco-hub::after {
-  content: "";
-  position: absolute;
-  inset: -14px;
-  border-radius: 50%;
-  border: 2px solid rgba(255, 132, 0, 0.35);
-  animation: eco-ring 3.2s var(--ease-out) infinite;
-  pointer-events: none;
-}
-.eco-hub::after { animation-delay: 1.6s; }
-@keyframes eco-ring {
-  0%   { transform: scale(0.92); opacity: 0.9; }
-  100% { transform: scale(1.35); opacity: 0; }
-}
-
-.eco-hub-icon {
-  width: 34px;
-  height: 34px;
-  margin-bottom: 6px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  opacity: 0.95;
-}
-.eco-hub-icon circle { fill: currentColor; stroke: none; }
-.eco-hub strong {
-  font-size: 18px;
-  line-height: 24px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-}
-.eco-hub em {
-  font-size: 14px;
-  line-height: 20px;
-  opacity: 0.92;
-}
-
-/* --- Stakeholder cards --- */
-.eco-card {
-  --tx: -50%;
-  --ty: -50%;
-  --s: 0.92;
-  --lift: 0px;
-  position: absolute;
-  left: var(--x);
-  top: var(--y);
-  z-index: 3;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  width: 232px;
-  padding: 14px 18px 14px 14px;
-  border: 1px solid rgba(16, 24, 40, 0.06);
-  border-radius: 18px;
-  background: var(--white);
-  box-shadow: 0 14px 34px -18px rgba(16, 24, 40, 0.28);
-  opacity: 0;
-  transform: translate(var(--tx), var(--ty)) translateY(var(--lift)) scale(var(--s));
-  transition:
-    opacity 0.6s var(--ease-out) calc(0.25s + var(--i, 0) * 0.12s),
-    transform 0.6s var(--ease-out) calc(0.25s + var(--i, 0) * 0.12s),
-    box-shadow 0.35s var(--ease-out),
-    border-color 0.35s var(--ease-out);
-}
-.ecosystem.is-in .eco-card { opacity: 1; --s: 1; }
-
-
-.eco-icon {
-  flex-shrink: 0;
-  display: grid;
-  place-items: center;
-  width: 46px;
-  height: 46px;
-  border-radius: 14px;
-  background: var(--tint);
-  color: var(--accent);
-  transition: transform 0.45s var(--ease-out), background-color 0.35s, color 0.35s;
-}
-.eco-icon svg {
-  width: 24px;
-  height: 24px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.eco-text {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  text-align: left;
-}
-.eco-text strong {
-  font-size: 16px;
-  line-height: 22px;
-  font-weight: 700;
-  color: #111;
-}
-.eco-text span {
-  font-size: 14px;
-  line-height: 20px;
-  color: #5b6270;
-}
-
-
-/* Accent per stakeholder */
-.eco-card--teachers { --accent: #12a06e; --tint: #e7f7ef; }
-.eco-card--parents  { --accent: #7c5cdb; --tint: #efeafc; }
-.eco-card--pros     { --accent: #e24a68; --tint: #fdeaee; }
-.eco-card--state    { --accent: #2f6fde; --tint: #e8f0fd; }
-.eco-card--inst     { --accent: #0f8f86; --tint: #e5f5f3; }
-
-
-/* --- Tablet and phone: hub on top, cards in a tidy grid, links hidden --- */
-@media (max-width: 900px) {
-  .eco-stage {
-    aspect-ratio: auto;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 14px;
-  }
-  .eco-links { display: none; }
-  .eco-hub {
-    position: relative;
-    left: auto;
-    top: auto;
-    grid-column: 1 / -1;
-    justify-self: center;
-    width: 168px;
-    height: 168px;
-    margin: 18px 0 22px;
-    transform: scale(0.6);
-  }
-  .ecosystem.is-in .eco-hub { transform: scale(1); }
-  .eco-card {
-    --tx: 0;
-    --ty: 0;
-    position: relative;
-    left: auto;
-    top: auto;
-    width: auto;
-  }
-}
-@media (max-width: 520px) {
-  .eco-stage { grid-template-columns: 1fr; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .eco-pulses { display: none; }
-  .eco-hub::before,
-  .eco-hub::after { animation: none; opacity: 0; }
+  .ecosystem--image { max-width: none; margin-inline: -14px; }
 }
 
 /* ==========================================================================
@@ -1220,7 +1007,8 @@ p, h1, h2, h3, figure, blockquote { margin: 0; }
   transition: transform 0.6s var(--ease-out), box-shadow 0.6s var(--ease-out);
 }
 .carousel--members .member:hover,
-.carousel--members .member:focus-within {
+.carousel--members .member:focus-visible,
+.carousel--members .member.is-open {
   transform: translateY(-8px);
   box-shadow: 0 30px 50px -30px rgba(0, 0, 0, 0.4);
 }
@@ -1255,7 +1043,8 @@ p, h1, h2, h3, figure, blockquote { margin: 0; }
   transition: transform 0.8s var(--ease-out), filter 0.8s var(--ease-out);
 }
 .member:hover .member-photo img,
-.member:focus-within .member-photo img {
+.member:focus-visible .member-photo img,
+.member.is-open .member-photo img {
   filter: grayscale(0%) contrast(1);
   transform: scale(1.06);
 }
@@ -1297,7 +1086,8 @@ p, h1, h2, h3, figure, blockquote { margin: 0; }
     box-shadow 0.75s var(--ease-out);
 }
 .member:hover .member-panel,
-.member:focus-within .member-panel {
+.member:focus-visible .member-panel,
+.member.is-open .member-panel {
   height: 100%; /* the full card height, so the panel covers the whole card */
   border-radius: 0 0 32px 32px;
   box-shadow: 0 -20px 40px -20px rgba(0, 0, 0, 0.15);
@@ -1328,7 +1118,8 @@ p, h1, h2, h3, figure, blockquote { margin: 0; }
   transition: opacity 0.4s var(--ease-out), transform 0.5s var(--ease-out);
 }
 .member:hover .member-bio,
-.member:focus-within .member-bio {
+.member:focus-visible .member-bio,
+.member.is-open .member-bio {
   opacity: 1;
   transform: none;
   transition-delay: 0.25s;
@@ -1741,6 +1532,9 @@ p, h1, h2, h3, figure, blockquote { margin: 0; }
 @media (max-width: 720px) {
   :root { --radius-xl: 40px; --radius-lg: 28px; }
 
+  /* Our Approach: the infographic is short on phones, so the panel needs far less space below it */
+  .approach { padding-bottom: 36px; }
+
   .display { font-size: 34px; }
 
   /* The banner dots sit on the card's bottom edge, so the copy is lifted clear of them */
@@ -1757,10 +1551,11 @@ p, h1, h2, h3, figure, blockquote { margin: 0; }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); padding-top: 32px; }
   .stat-num { font-size: clamp(24px, 7.5vw, 34px); }
 
-  .quote-card { min-height: 0; padding: 36px 28px 300px; }
+  /* Phones: a smaller photo at the TOP of the card, lined up with the left edge of the text */
+  .quote-card { min-height: 0; padding: 224px 28px 36px; }
   .quote-card blockquote,
   .quote-card figcaption { width: 100%; max-width: none; }
-  .quote-photo { right: 28px; left: 28px; width: auto; height: 240px; bottom: 28px; }
+  .quote-photo { left: 28px; right: auto; margin: 0; width: auto; height: 172px; top: 28px; bottom: auto; }
 
   .carousel-head { flex-wrap: wrap; }
   .carousel--members .member { width: 82vw; }
@@ -1923,18 +1718,15 @@ p, h1, h2, h3, figure, blockquote { margin: 0; }
 }
 
 
-/* Touch screens and phones have no hover, so advisory cards show their bio all the time:
-   photo on top, orange name bar, then the bio, stacked normally. */
-@media (hover: none), (max-width: 720px) {
-  .carousel--members .member { height: auto; }
-  .carousel--members .member .member-photo { position: relative; inset: auto; height: 170px; }
-  .carousel--members .member .member-panel {
-    position: relative;
-    height: auto;
-    max-height: none;
-    border-radius: 0 0 32px 32px;
-    box-shadow: none;
-  }
-  .carousel--members .member .member-bio { opacity: 1; transform: none; }
-  .carousel--members .member:hover { transform: none; box-shadow: none; }
+/* Advisory cards behave the same on every screen: photo on top, orange name bar, and the bio
+   opens over the card on hover (mouse), tap or keyboard focus (touch and keyboard: the cards
+   are focusable, so a tap opens the card and a tap elsewhere closes it). */
+.carousel--members .member { cursor: pointer; outline: none; -webkit-tap-highlight-color: transparent; }
+
+/* Small phones: the longest names wrap to two lines and the longest bios need more room in a
+   narrow card, so the card and its name bar are a little taller (every card stays the same). */
+@media (max-width: 440px) {
+  .carousel--members .member { height: 440px; }
+  .carousel--members .member .member-photo { inset: 0 0 120px 0; }
+  .carousel--members .member .member-panel { --panel-collapsed: 120px; }
 }

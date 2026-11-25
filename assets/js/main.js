@@ -159,6 +159,32 @@
     sync();
   });
 
+  /* ---------- Advisory cards: tap to open the bio on touch screens ----------
+     A mouse opens a card by hovering, the keyboard by focusing it (CSS). Touch has no hover,
+     so a tap toggles the card open, and a tap anywhere else closes it. */
+  const memberCards = [...document.querySelectorAll(".carousel--members .member")];
+  if (memberCards.length) {
+    let lastPointer = "mouse";
+    document.addEventListener(
+      "pointerdown",
+      (e) => {
+        lastPointer = e.pointerType || "mouse";
+        if (!e.target.closest(".carousel--members .member")) {
+          memberCards.forEach((m) => m.classList.remove("is-open"));
+        }
+      },
+      true
+    );
+    memberCards.forEach((m) => {
+      m.addEventListener("click", () => {
+        if (lastPointer === "mouse") return; // hover already handles the mouse
+        const wasOpen = m.classList.contains("is-open");
+        memberCards.forEach((x) => x.classList.remove("is-open"));
+        if (!wasOpen) m.classList.add("is-open");
+      });
+    });
+  }
+
   /* ---------- Drag-to-scroll for carousels (mouse) ---------- */
   document.querySelectorAll(".carousel").forEach((track) => {
     let down = false;

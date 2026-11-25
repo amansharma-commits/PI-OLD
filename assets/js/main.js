@@ -256,10 +256,10 @@
   window.addEventListener("resize", syncCarouselControls);
 
   /* ---------- Video pop-up player ---------- */
-  const videoThumb = document.querySelector(".thumb");
+  const videoTriggers = [...document.querySelectorAll("[data-video]")];
   const videoModal = document.querySelector(".video-modal");
 
-  if (videoThumb && videoModal) {
+  if (videoTriggers.length && videoModal) {
     const frame = videoModal.querySelector(".video-modal__frame");
     const closeBtn = videoModal.querySelector(".video-modal__close");
     let returnFocus = null;
@@ -301,7 +301,7 @@
       if (returnFocus) returnFocus.focus();
     };
 
-    videoThumb.addEventListener("click", () => {
+    videoTriggers.forEach((videoThumb) => videoThumb.addEventListener("click", () => {
       const src = (videoThumb.dataset.video || "").trim();
 
       if (!src) {
@@ -332,7 +332,7 @@
       } else {
         window.open(src, "_blank", "noopener,noreferrer");
       }
-    });
+    }));
 
     videoModal.querySelectorAll("[data-close-video]").forEach((el) => el.addEventListener("click", closeVideo));
     document.addEventListener("keydown", (e) => {

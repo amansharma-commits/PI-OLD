@@ -699,7 +699,7 @@ p, h1, h2, h3, figure, blockquote { margin: 0; }
   place-items: center;
   border-radius: 36px;
   border: 2px solid var(--orange);
-  background: linear-gradient(to right, #fff, var(--orange-tint));
+  background: rgba(255, 255, 255, 0.82);
   box-shadow: 0 14px 32px -10px rgba(0, 0, 0, 0.15), 0 2px 6px rgba(0, 0, 0, 0.08);
   transition: transform 0.5s var(--ease-out);
 }
@@ -733,7 +733,7 @@ p, h1, h2, h3, figure, blockquote { margin: 0; }
 .stats {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 56px 40px;
+  gap: 56px clamp(16px, 2vw, 40px);
   padding-top: var(--head-gap);
 }
 
@@ -747,7 +747,7 @@ p, h1, h2, h3, figure, blockquote { margin: 0; }
 .stat:hover { transform: translateY(-4px); }
 
 .stat-num {
-  font-size: clamp(32px, calc(2.8vw + 2px), 42px);
+  font-size: clamp(28px, calc(3.3vw - 6px), 42px);
   font-weight: 700;
   line-height: 1.4;
   white-space: nowrap;
@@ -796,6 +796,9 @@ p, h1, h2, h3, figure, blockquote { margin: 0; }
 .ecosystem {
   max-width: 1100px;
   margin: var(--head-gap) auto 0;
+  /* Cards animate in from slightly off position; never let that widen the page */
+  overflow-x: clip;
+  overflow-clip-margin: 24px;
 }
 
 .eco-stage {
@@ -1203,12 +1206,10 @@ p, h1, h2, h3, figure, blockquote { margin: 0; }
 }
 /* Photos that fill the card width in the Figma frame: crop to fill, no side gaps */
 .member--fill .member-photo img {
-  /* Figma geometry for this photo (node 959:857) */
-  left: 0.11%;
-  top: -0.09%;
-  width: 99.82%;
-  height: 114%;
-  object-fit: fill;
+  /* Fill the card width and anchor to the top like the Figma frame, without
+     stretching the photo (so it stays undistorted at every screen size) */
+  object-fit: cover;
+  object-position: center top;
 }
 
 /* Orange panel: collapsed it shows only name + role; on hover it grows to fill the card */
@@ -1634,10 +1635,11 @@ p, h1, h2, h3, figure, blockquote { margin: 0; }
 /* ==========================================================================
    RESPONSIVE
    ========================================================================== */
-@media (max-width: 1200px) {
+@media (max-width: 1100px) {
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .news-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .news-grid .news-card:last-child { display: none; }
+}
+
+@media (max-width: 1200px) {
   .mission { flex-direction: column; }
   .mission-copy { width: 100%; }
   .mission-copy .btn-row { margin-top: 28px; }
@@ -1648,6 +1650,13 @@ p, h1, h2, h3, figure, blockquote { margin: 0; }
 
 @media (max-width: 960px) {
   .stats { gap: 36px 24px; }
+  /* Tablet: two blog cards per row; the third sits centred under them (never hidden) */
+  .news-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .news-grid .news-card:last-child {
+    grid-column: 1 / -1;
+    justify-self: center;
+    width: calc(50% - 15px);
+  }
   .quotes--static { grid-template-columns: 1fr; }
   .carousel--quotes .quote-card { min-width: 88%; }
 
@@ -1689,7 +1698,7 @@ p, h1, h2, h3, figure, blockquote { margin: 0; }
   .carousel--quotes .quote-card { width: 84vw; min-width: 0; }
 
   .news-grid { grid-template-columns: 1fr; }
-  .news-grid .news-card:last-child { display: flex; }
+  .news-grid .news-card:last-child { grid-column: auto; justify-self: stretch; width: auto; }
 
   .footer-list { gap: 14px; }
   .footer-links { gap: 28px; }
@@ -1791,6 +1800,9 @@ p, h1, h2, h3, figure, blockquote { margin: 0; }
   max-width: 46ch;
 }
 .footer-web { font-size: 16px; line-height: 1.5; color: var(--orange); }
+.footer-web a { color: var(--orange); text-decoration: none; }
+.footer-web a:hover { text-decoration: underline; }
+.footer-web-sep { margin: 0 10px; color: var(--orange); opacity: 0.6; }
 /* The map is a link to Google Maps (opens in a new tab) */
 .footer-map-link {
   position: relative;

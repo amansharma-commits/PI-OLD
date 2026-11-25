@@ -50,7 +50,7 @@
 
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: 120px; /* header height plus breathing room, so section titles are not hidden */
+  scroll-padding-top: 96px; /* keeps a section title clear of the header when it slides back in */
   -webkit-text-size-adjust: 100%;
 }
 
@@ -264,14 +264,20 @@ p, h1, h2, h3, figure, blockquote { margin: 0; }
    TOP HEADER — Figma node 940:4461 (Brand/Navy #1B2B5B, Orange #FF8400)
    ========================================================================== */
 .site-header {
+  /* Smart header: stays at the top, slides out of view while scrolling down and
+     slides back in as soon as the visitor scrolls up */
   position: sticky;
   top: 0;
   z-index: 50;
   background: var(--white);
-  transition: box-shadow 0.4s var(--ease-out);
+  transition: box-shadow 0.4s var(--ease-out), transform 0.4s var(--ease-out);
 }
 .site-header.is-scrolled {
   box-shadow: 0 10px 30px -18px rgba(27, 43, 91, 0.28);
+}
+.site-header.is-hidden {
+  transform: translateY(-100%);
+  box-shadow: none;
 }
 
 .header-inner {
@@ -429,9 +435,9 @@ p, h1, h2, h3, figure, blockquote { margin: 0; }
   padding: 10px 28px;
   border-radius: 999px;
   background: var(--orange);
-  color: var(--white);
-  font-size: 15px;
-  font-weight: 600;
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 400;
   line-height: 28px;
   white-space: nowrap;
   flex-shrink: 0;
@@ -542,8 +548,8 @@ p, h1, h2, h3, figure, blockquote { margin: 0; }
   height: 100%;
   object-fit: cover;
   object-position: 50% 42%;
-  animation: kenburns 22s var(--ease-in-out) infinite alternate both;
   transform-origin: center;
+  will-change: transform;
 }
 
 .hero-copy {
@@ -555,22 +561,66 @@ p, h1, h2, h3, figure, blockquote { margin: 0; }
   margin: 0 0 60px 60px;
 }
 
-/* Banner slides: one per banner, cross-faded. Copy animates in only on the active slide. */
+/* Banner slides: layered transition.
+   - the incoming slide (.is-active) fades in ON TOP of the outgoing one,
+   - the outgoing slide (.is-leaving) stays fully opaque underneath, so the two never
+     show through each other (no muddy half-and-half double image),
+   - the new image settles in with a gentle zoom-out, the old copy lifts away and the
+     new copy rises in just after the image appears. */
 .hero-slide {
   position: absolute;
   inset: 0;
+  z-index: 0;
   display: flex;
   align-items: flex-end;
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.9s var(--ease-out), visibility 0.9s;
+  pointer-events: none;
 }
-.hero-slide.is-active {
+.hero-slide.is-leaving {
+  z-index: 1;
   opacity: 1;
   visibility: visible;
 }
+.hero-slide.is-active {
+  z-index: 2;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+/* Reveal: from the first banner change on, the new banner wipes in from the right over the
+   old one (the very first banner on page load simply appears) */
+.hero-card.is-playing .hero-slide.is-active {
+  animation: heroWipe 1.15s cubic-bezier(0.76, 0, 0.24, 1) both;
+}
 .hero-slide .hero-media { z-index: -1; }
-.hero-slide:not(.is-active) .hero-media img { animation-play-state: paused; }
+/* Parallax: the old banner drifts left a little while it is covered */
+.hero-slide.is-leaving .hero-media {
+  animation: heroDrift 1.15s cubic-bezier(0.76, 0, 0.24, 1) both;
+}
+
+/* One animation name for both states so the zoom carries on smoothly while a slide leaves */
+.hero-slide.is-active .hero-media img,
+.hero-slide.is-leaving .hero-media img {
+  animation: heroSettle 7s var(--ease-out) both;
+}
+
+@keyframes heroWipe {
+  from { clip-path: inset(0 0 0 100%); }
+  to   { clip-path: inset(0 0 0 0); }
+}
+@keyframes heroDrift {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-12%, 0, 0); }
+}
+@keyframes heroSettle {
+  from { transform: scale(1.14); }
+  to   { transform: scale(1); }
+}
+@keyframes copyOut {
+  from { opacity: 1; transform: none; }
+  to   { opacity: 0; transform: translate3d(0, -14px, 0); }
+}
 
 .hero-title {
   font-size: clamp(38px, 3.75vw, 54px);
@@ -594,14 +644,17 @@ p, h1, h2, h3, figure, blockquote { margin: 0; }
 .hero-copy > * { opacity: 0; }
 .hero-slide.is-active .hero-copy > * {
   animation: rise 0.9s var(--ease-out) both;
-  animation-delay: var(--d, 0s);
+  animation-delay: calc(var(--d, 0s) + 0.3s);
+}
+.hero-slide.is-leaving .hero-copy > * {
+  animation: copyOut 0.45s var(--ease-in-out) both;
 }
 
 .hero-dots {
   position: absolute;
   right: 70px;
   bottom: -28px;
-  z-index: 2;
+  z-index: 5;
   display: flex;
   gap: 10px;
   padding: 28px 30px 50px;
@@ -977,13 +1030,6 @@ p, h1, h2, h3, figure, blockquote { margin: 0; }
   color: #5b6270;
 }
 
-/* Blank placeholder card (bottom centre): a faint outline until it is given content */
-.eco-card--blank {
-  min-height: 74px;
-  background: var(--white);
-  border: 1px dashed rgba(16, 24, 40, 0.25);
-  box-shadow: none;
-}
 
 /* Accent per stakeholder */
 .eco-card--teachers { --accent: #12a06e; --tint: #e7f7ef; }
@@ -1002,7 +1048,6 @@ p, h1, h2, h3, figure, blockquote { margin: 0; }
     gap: 14px;
   }
   .eco-links { display: none; }
-  .eco-card--blank { display: none; }
   .eco-hub {
     position: relative;
     left: auto;
@@ -1128,15 +1173,14 @@ p, h1, h2, h3, figure, blockquote { margin: 0; }
   border-radius: 24px;
   transition: transform 0.35s var(--ease-out), background-color 0.35s, opacity 0.35s;
 }
-.arrow--prev { background: var(--muted); }
-.arrow--next { background: #000; }
+/* Colour follows state, not side: an arrow you can use is black, one that has nothing left
+   to scroll to is grey. So at the start the right arrow is black and the left is grey, and
+   once the last card is reached the left arrow turns black and the right one grey. */
+.arrow { background: #000; cursor: pointer; }
 .arrow img { width: 22px; height: 32px; }
-.arrow:hover:not(:disabled) { transform: scale(1.08); }
+.arrow:hover:not(:disabled) { transform: scale(1.08); background: var(--orange); }
 .arrow:active:not(:disabled) { transform: scale(0.94); }
-.arrow:disabled { opacity: 0.4; cursor: default; }
-
-.arrow--prev:hover:not(:disabled) { background: #8f9194; }
-.arrow--next:hover:not(:disabled) { background: var(--orange); }
+.arrow:disabled { background: var(--muted); cursor: default; }
 
 .carousel {
   display: flex;
@@ -1210,6 +1254,17 @@ p, h1, h2, h3, figure, blockquote { margin: 0; }
      stretching the photo (so it stays undistorted at every screen size) */
   object-fit: cover;
   object-position: center top;
+}
+/* Sudesh: Figma shows this photo zoomed in (about 120% wide, shifted left and up).
+   Same box as Figma, but `cover` inside it so the photo is never stretched. */
+.member--sudesh .member-photo img {
+  left: -9.95%;
+  top: -15.73%;
+  width: 120.04%;
+  max-width: none; /* the global img rule would cap the width at 100% */
+  height: 143.15%;
+  object-fit: cover;
+  object-position: center center;
 }
 
 /* Orange panel: collapsed it shows only name + role; on hover it grows to fill the card */
@@ -1678,7 +1733,8 @@ p, h1, h2, h3, figure, blockquote { margin: 0; }
   /* The banner dots sit on the card's bottom edge, so the copy is lifted clear of them */
   .hero-card { min-height: 600px; }
   .hero-copy { margin: 0 0 92px 28px; width: calc(100% - 56px); }
-  .hero-title { font-size: 36px; }
+  /* Scales with the screen so long banner headings always fit inside the banner */
+  .hero-title { font-size: clamp(24px, 7vw, 36px); line-height: 1.3; }
   .hero-text { padding-bottom: 24px; }
   .hero-dots { left: 50%; right: auto; translate: -50% 0; padding-inline: 22px; gap: 8px; }
 
@@ -1750,7 +1806,7 @@ p, h1, h2, h3, figure, blockquote { margin: 0; }
 
 .footer-heading { font-size: 26px; line-height: 34px; font-weight: 400; color: var(--white); }
 .office-list { margin-top: 22px; display: flex; flex-direction: column; gap: 20px; }
-.office-list li { display: flex; align-items: flex-start; gap: 14px; font-size: 16px; line-height: 24px; color: var(--footer-muted); }
+.office-list li { display: flex; align-items: flex-start; gap: 14px; font-size: 14px; line-height: 24px; color: var(--footer-muted); }
 .office-icon {
   flex-shrink: 0;
   display: grid;

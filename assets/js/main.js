@@ -11,9 +11,24 @@
   const progress = document.querySelector(".scroll-progress");
   let ticking = false;
 
+  let lastY = window.scrollY;
+  const HIDE_AFTER = 120; // never hide while still near the top of the page
+  const DELTA = 6;        // ignore tiny scroll jitters
+
   const onScroll = () => {
     const y = window.scrollY;
     header.classList.toggle("is-scrolled", y > 24);
+
+    // Smart header: hide while scrolling down, show again on any scroll up
+    const menuOpen = document.getElementById("site-nav")?.classList.contains("is-open");
+    if (menuOpen || y < HIDE_AFTER) {
+      header.classList.remove("is-hidden");
+    } else if (y > lastY + DELTA) {
+      header.classList.add("is-hidden");
+    } else if (y < lastY - DELTA) {
+      header.classList.remove("is-hidden");
+    }
+    if (Math.abs(y - lastY) > DELTA) lastY = y;
 
     const max = root.scrollHeight - window.innerHeight;
     const ratio = max > 0 ? Math.min(Math.max(y / max, 0), 1) : 0;
@@ -32,6 +47,8 @@
     { passive: true }
   );
   onScroll();
+  // Keyboard users tabbing into the header must always see it
+  header.addEventListener("focusin", () => header.classList.remove("is-hidden"));
 
   /* ---------- Mobile navigation ---------- */
   const toggle = document.querySelector(".nav-toggle");
@@ -124,13 +141,21 @@
     });
 
     // Keep the arrows honest about the available range
+    // The track has a little padding and scroll-snap, so "at the very start" rests a few px
+    // away from 0 (e.g. scrollLeft 4). Allow for that, otherwise the previous arrow looks
+    // active on first load.
     const sync = () => {
-      const max = track.scrollWidth - track.clientWidth - 2;
-      if (dir < 0) btn.disabled = track.scrollLeft <= 2;
+      const cs = getComputedStyle(track);
+      const padL = parseFloat(cs.paddingLeft) || 0;
+      const padR = parseFloat(cs.paddingRight) || 0;
+      const tolerance = 3;
+      const max = track.scrollWidth - track.clientWidth - padR - tolerance;
+      if (dir < 0) btn.disabled = track.scrollLeft <= padL + tolerance;
       else btn.disabled = track.scrollLeft >= max;
     };
     track.addEventListener("scroll", sync, { passive: true });
     window.addEventListener("resize", sync);
+    window.addEventListener("load", sync); // once images and fonts have settled the layout
     sync();
   });
 
@@ -192,12 +217,35 @@
   const heroCard = document.querySelector(".hero-card");
   const slides = [...document.querySelectorAll(".hero-slide")];
   const dots = [...document.querySelectorAll(".hero-dots .dot")];
-  const INTERVAL = 2000;
+  const INTERVAL = 4000;
   let current = 0;
   let timer = null;
 
+  // The outgoing slide stays opaque underneath while the new one fades in on top
+  const LEAVE_MS = 4000;
+  let leaveTimer = null;
+
   const showSlide = (index) => {
-    current = (index + slides.length) % slides.length;
+    const next = (index + slides.length) % slides.length;
+    if (next === current) return;
+
+    const prev = slides[current];
+    heroCard.classList.add("is-playing"); // enables the wipe transition (not on first paint)
+    slides.forEach((slide) => slide.classList.remove("is-leaving"));
+    prev.classList.add("is-leaving");
+    // Keep the old slide underneath until the new one has FINISHED wiping in (even if the
+    // device drops frames); the timer is only a safety net.
+    const target = slides[next];
+    const onEnd = (e) => {
+      if (e.target !== target || e.animationName !== "heroWipe") return;
+      target.removeEventListener("animationend", onEnd);
+      prev.classList.remove("is-leaving");
+    };
+    target.addEventListener("animationend", onEnd);
+    clearTimeout(leaveTimer);
+    leaveTimer = setTimeout(() => prev.classList.remove("is-leaving"), LEAVE_MS);
+
+    current = next;
     slides.forEach((slide, i) => {
       const active = i === current;
       slide.classList.toggle("is-active", active);
@@ -211,7 +259,8 @@
   };
 
   const startAutoplay = () => {
-    if (prefersReduced || timer) return;
+    // Always auto-advance (a simple fade); hover / keyboard focus / video pop-up pause it
+    if (timer) return;
     timer = setInterval(() => showSlide(current + 1), INTERVAL);
   };
   const stopAutoplay = () => {
@@ -228,10 +277,17 @@
       });
     });
 
-    // Pause while the visitor is reading the banner
-    heroCard.addEventListener("mouseenter", stopAutoplay);
-    heroCard.addEventListener("mouseleave", startAutoplay);
-    heroCard.addEventListener("focusin", stopAutoplay);
+    // Pause while a mouse rests on the banner (touch taps must not leave it stuck paused)
+    heroCard.addEventListener("pointerenter", (e) => {
+      if (e.pointerType === "mouse") stopAutoplay();
+    });
+    heroCard.addEventListener("pointerleave", (e) => {
+      if (e.pointerType === "mouse") startAutoplay();
+    });
+    // Pause for keyboard focus only; a mouse click that focuses a button must not stop it for good
+    heroCard.addEventListener("focusin", (e) => {
+      if (e.target.matches(":focus-visible")) stopAutoplay();
+    });
     heroCard.addEventListener("focusout", startAutoplay);
 
     document.addEventListener("visibilitychange", () => {
@@ -282,6 +338,7 @@
 
     const openVideo = (node) => {
       returnFocus = document.activeElement;
+      stopAutoplay();
       frame.classList.toggle("is-image", node.tagName === "IMG");
       frame.replaceChildren(node);
       videoModal.hidden = false;
@@ -298,6 +355,7 @@
         videoModal.hidden = true;
         frame.replaceChildren();
       }, prefersReduced ? 0 : 300);
+      startAutoplay(); // before restoring focus, so keyboard focus can still pause it
       if (returnFocus) returnFocus.focus();
     };
 
